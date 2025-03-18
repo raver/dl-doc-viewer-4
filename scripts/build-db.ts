@@ -7,6 +7,34 @@ import { fileURLToPath } from "url";
 // Define __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const isProduction = process.env.NODE_ENV === "production";
+
+if (isProduction) {
+  console.log("Running in production mode");
+} else {
+  console.log("Running in development mode");
+}
+
+
+const simpleDllPath = isProduction ? path.resolve(
+  __dirname,
+  "../plugin/libsimple-linux-ubuntu-latest/libsimple.so"
+) : path.resolve(
+  __dirname,
+  "../plugin/libsimple-windows-x64/simple"
+);
+
+console.log(`simpleDllPath: ${simpleDllPath}`);
+
+const jiebaDictPath = isProduction ? path.resolve(
+  __dirname,
+  "../plugin/libsimple-linux-ubuntu-latest/dict"
+) : path.resolve(
+  __dirname,
+  "../plugin/libsimple-windows-x64/dict"
+);
+
+console.log(`jiebaDictPath: ${jiebaDictPath}`);
 
 async function buildDatabase() {
   console.log("Starting database build process...")
@@ -31,8 +59,23 @@ async function buildDatabase() {
   }
 
   // Create new database
-  const db = new Database(dbPath)
+  const db = new Database(dbPath, {
+    verbose: console.log,
+    timeout: 10000,
+  })
   console.log("Database created successfully")
+  db.pragma("journal_mode = WAL")
+
+
+
+  // Load simple dll and test simple_query
+  db.loadExtension(simpleDllPath);
+  const row: any = db.prepare("select simple_query('pinyin') as query").get();
+  console.log(row.query);
+
+  // Set the jieba dict file path
+  db.prepare("select jieba_dict(?)").run(jiebaDictPath);
+
 
   // Create documents table
   db.exec(`
@@ -50,8 +93,9 @@ async function buildDatabase() {
     CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(
       title, 
       content, 
-      content='documents', 
-      tokenize='porter'
+      content=documents, 
+      content_rowid = id,
+      tokenize='simple'
     )
   `)
 
@@ -75,6 +119,8 @@ async function buildDatabase() {
     END;
   `)
   console.log("Full-text search index created")
+
+
 
   // Read markdown files from the md directory
   const mdDir = path.join(process.cwd(), "md")

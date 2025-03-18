@@ -8,4 +8,4 @@
 # Local Netlify folder
 .netlify
 
-public/*.db
+public/*.db*
