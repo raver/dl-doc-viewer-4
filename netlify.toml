@@ -1,5 +1,5 @@
 [build]
-command = "react-router build"
+command = "tsx scripts/build-db.ts && cp documents.db build/client && react-router build"
 publish = "build/client"
 
 [dev]
