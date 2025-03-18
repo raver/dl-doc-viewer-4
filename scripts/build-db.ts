@@ -1,7 +1,12 @@
-import Database  from "better-sqlite3"
+import Database from "better-sqlite3"
 import fs from "fs/promises"
-import { readFileSync } from "fs"
+import { copyFileSync, mkdirSync, readFileSync } from "fs"
 import path from "path"
+import { fileURLToPath } from "url";
+
+// Define __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function buildDatabase() {
   console.log("Starting database build process...")
@@ -104,6 +109,15 @@ async function buildDatabase() {
   // Close database
   db.close()
   console.log("Database build completed successfully")
+
+  // Move the generated documents.db to the build/client folder
+  const sourcePath = dbPath;
+  const destinationPath = path.resolve(__dirname, '../build/client/documents.db');
+
+  mkdirSync(path.dirname(destinationPath), { recursive: true });
+  copyFileSync(sourcePath, destinationPath);
+
+  console.log('documents.db has been moved to build/client');
 }
 
 // Execute the function
